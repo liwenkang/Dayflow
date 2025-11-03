@@ -184,7 +184,6 @@ jobs:
           prerelease: false
           files: |
             Dayflow.dmg
-          make_latest: ${{ steps.version.outputs.GIT_TAG != '' }}  # 只有正式 tag 才设为最新
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
