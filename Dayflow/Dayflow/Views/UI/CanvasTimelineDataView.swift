@@ -345,7 +345,7 @@ struct CanvasTimelineDataView: View {
                 }
                 
                 // Sort by start time to maintain consistent order
-                return results.sorted(by: { $0.activity.start < $1.activity.start })
+                return results.sorted(by: { $0.activity.startTime < $1.activity.startTime })
             }
 
             // Final cancellation check before updating UI

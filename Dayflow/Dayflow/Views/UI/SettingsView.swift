@@ -94,6 +94,57 @@ struct SettingsView: View {
     }()
 
     var body: some View {
+        mainContentView
+            .padding(.trailing, 40)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .onAppear(perform: handleAppear)
+            .onChange(of: analyticsEnabled) { oldValue, enabled in
+                AnalyticsService.shared.setOptIn(enabled)
+            }
+            .onChange(of: currentProvider) { oldValue, newProvider in
+                reloadLocalProviderSettings()
+                if newProvider == "gemini" {
+                    loadGeminiPromptOverridesIfNeeded(force: true)
+                } else if newProvider == "ollama" {
+                    loadOllamaPromptOverridesIfNeeded(force: true)
+                }
+            }
+            .onChange(of: selectedTab) { oldValue, newValue in
+                if newValue == .storage {
+                    refreshStorageIfNeeded()
+                }
+            }
+            .sheet(item: Binding(
+                get: { setupModalProvider.map { ProviderSetupWrapper(id: $0) } },
+                set: { setupModalProvider = $0?.id }
+            )) { wrapper in
+                LLMProviderSetupView(
+                    providerType: wrapper.id,
+                    onBack: { setupModalProvider = nil },
+                    onComplete: {
+                        completeProviderSwitch(wrapper.id)
+                        setupModalProvider = nil
+                    }
+                )
+                .frame(minWidth: 900, minHeight: 650)
+            }
+            .alert(isPresented: $showLimitConfirmation) {
+                limitConfirmationAlert
+            }
+            .preferredColorScheme(.light)
+            .onChange(of: useCustomGeminiTitlePrompt) { persistGeminiPromptOverridesIfReady() }
+            .onChange(of: useCustomGeminiSummaryPrompt) { persistGeminiPromptOverridesIfReady() }
+            .onChange(of: useCustomGeminiDetailedPrompt) { persistGeminiPromptOverridesIfReady() }
+            .onChange(of: geminiTitlePromptText) { persistGeminiPromptOverridesIfReady() }
+            .onChange(of: geminiSummaryPromptText) { persistGeminiPromptOverridesIfReady() }
+            .onChange(of: geminiDetailedPromptText) { persistGeminiPromptOverridesIfReady() }
+            .onChange(of: useCustomOllamaTitlePrompt) { persistOllamaPromptOverridesIfReady() }
+            .onChange(of: useCustomOllamaSummaryPrompt) { persistOllamaPromptOverridesIfReady() }
+            .onChange(of: ollamaTitlePromptText) { persistOllamaPromptOverridesIfReady() }
+            .onChange(of: ollamaSummaryPromptText) { persistOllamaPromptOverridesIfReady() }
+    }
+    
+    private var mainContentView: some View {
         HStack(alignment: .top, spacing: 32) {
             sidebar
 
@@ -109,86 +160,44 @@ struct SettingsView: View {
 
             Spacer(minLength: 0)
         }
-        .padding(.trailing, 40)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .onAppear {
-            loadCurrentProvider()
-            analyticsEnabled = AnalyticsService.shared.isOptedIn
-            refreshStorageIfNeeded()
-            // Refresh cached local settings for provider test view
-            reloadLocalProviderSettings()
-            loadGeminiPromptOverridesIfNeeded()
-            loadOllamaPromptOverridesIfNeeded()
-            let recordingsLimit = StoragePreferences.recordingsLimitBytes
-            recordingsLimitBytes = recordingsLimit
-            recordingsLimitIndex = indexForLimit(recordingsLimit)
-            let timelapseLimit = StoragePreferences.timelapsesLimitBytes
-            timelapsesLimitBytes = timelapseLimit
-            timelapsesLimitIndex = indexForLimit(timelapseLimit)
-            AnalyticsService.shared.capture("settings_opened")
+    }
+    
+    private func handleAppear() {
+        loadCurrentProvider()
+        analyticsEnabled = AnalyticsService.shared.isOptedIn
+        refreshStorageIfNeeded()
+        // Refresh cached local settings for provider test view
+        reloadLocalProviderSettings()
+        loadGeminiPromptOverridesIfNeeded()
+        loadOllamaPromptOverridesIfNeeded()
+        let recordingsLimit = StoragePreferences.recordingsLimitBytes
+        recordingsLimitBytes = recordingsLimit
+        recordingsLimitIndex = indexForLimit(recordingsLimit)
+        let timelapseLimit = StoragePreferences.timelapsesLimitBytes
+        timelapsesLimitBytes = timelapseLimit
+        timelapsesLimitIndex = indexForLimit(timelapseLimit)
+        AnalyticsService.shared.capture("settings_opened")
+    }
+    
+    private var limitConfirmationAlert: Alert {
+        guard let pending = pendingLimit,
+              Self.storageOptions.indices.contains(pending.index) else {
+            return Alert(title: Text("Adjust storage limit"), dismissButton: .default(Text("OK")))
         }
-        .onChange(of: analyticsEnabled) { oldValue, enabled in
-            AnalyticsService.shared.setOptIn(enabled)
-        }
-        .onChange(of: currentProvider) { oldValue, newProvider in
-            reloadLocalProviderSettings()
-            if newProvider == "gemini" {
-                loadGeminiPromptOverridesIfNeeded(force: true)
-            } else if newProvider == "ollama" {
-                loadOllamaPromptOverridesIfNeeded(force: true)
-            }
-        }
-        .onChange(of: selectedTab) { oldValue, newValue in
-            if newValue == .storage {
-                refreshStorageIfNeeded()
-            }
-        }
-        .sheet(item: Binding(
-            get: { setupModalProvider.map { ProviderSetupWrapper(id: $0) } },
-            set: { setupModalProvider = $0?.id }
-        )) { wrapper in
-            LLMProviderSetupView(
-                providerType: wrapper.id,
-                onBack: { setupModalProvider = nil },
-                onComplete: {
-                    completeProviderSwitch(wrapper.id)
-                    setupModalProvider = nil
-                }
-            )
-            .frame(minWidth: 900, minHeight: 650)
-        }
-        .alert(isPresented: $showLimitConfirmation) {
-            guard let pending = pendingLimit,
-                  Self.storageOptions.indices.contains(pending.index) else {
-                return Alert(title: Text("Adjust storage limit"), dismissButton: .default(Text("OK")))
-            }
 
-            let option = Self.storageOptions[pending.index]
-            let categoryName = pending.category.displayName
-            return Alert(
-                title: Text("Lower \(categoryName) limit?"),
-                message: Text("Reducing the \(categoryName) limit to \(option.label) will immediately delete the oldest \(categoryName) data to stay under the new cap."),
-                primaryButton: .destructive(Text("Confirm")) {
-                    applyLimit(for: pending.category, index: pending.index)
-                },
-                secondaryButton: .cancel {
-                    pendingLimit = nil
-                    showLimitConfirmation = false
-                }
-            )
-        }
-        // The settings palette is tailored for light mode; keep it consistent even when the app runs in Dark Mode.
-        .preferredColorScheme(.light)
-        .onChange(of: useCustomGeminiTitlePrompt) { persistGeminiPromptOverridesIfReady() }
-        .onChange(of: useCustomGeminiSummaryPrompt) { persistGeminiPromptOverridesIfReady() }
-        .onChange(of: useCustomGeminiDetailedPrompt) { persistGeminiPromptOverridesIfReady() }
-        .onChange(of: geminiTitlePromptText) { persistGeminiPromptOverridesIfReady() }
-        .onChange(of: geminiSummaryPromptText) { persistGeminiPromptOverridesIfReady() }
-        .onChange(of: geminiDetailedPromptText) { persistGeminiPromptOverridesIfReady() }
-        .onChange(of: useCustomOllamaTitlePrompt) { persistOllamaPromptOverridesIfReady() }
-        .onChange(of: useCustomOllamaSummaryPrompt) { persistOllamaPromptOverridesIfReady() }
-        .onChange(of: ollamaTitlePromptText) { persistOllamaPromptOverridesIfReady() }
-        .onChange(of: ollamaSummaryPromptText) { persistOllamaPromptOverridesIfReady() }
+        let option = Self.storageOptions[pending.index]
+        let categoryName = pending.category.displayName
+        return Alert(
+            title: Text("Lower \(categoryName) limit?"),
+            message: Text("Reducing the \(categoryName) limit to \(option.label) will immediately delete the oldest \(categoryName) data to stay under the new cap."),
+            primaryButton: .destructive(Text("Confirm")) {
+                applyLimit(for: pending.category, index: pending.index)
+            },
+            secondaryButton: .cancel {
+                pendingLimit = nil
+                showLimitConfirmation = false
+            }
+        )
     }
 
     private var sidebar: some View {
