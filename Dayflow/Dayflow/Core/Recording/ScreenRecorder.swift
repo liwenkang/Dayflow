@@ -849,7 +849,7 @@ final class ScreenRecorder: NSObject, SCStreamOutput {
 }
 
 extension ScreenRecorder: SCStreamDelegate {
-    nonisolated func stream(_ s: SCStream, didStopWithError error: Error?) {
+    nonisolated func stream(_ s: SCStream, didStopWithError error: (any Error)?) {
         // ReplayKit occasionally hands a nil NSError pointer; accept it as optional before bridging.
         let scError = error as NSError?
 

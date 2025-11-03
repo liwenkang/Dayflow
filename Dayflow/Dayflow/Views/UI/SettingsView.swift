@@ -100,18 +100,32 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .onAppear(perform: handleAppear)
-        .onChange(of: analyticsEnabled, perform: handleAnalyticsChange)
-        .onChange(of: currentProvider, perform: handleProviderChange)
-        .onChange(of: selectedTab, perform: handleTabChange)
+        .onChange(of: analyticsEnabled) { newValue in
+            handleAnalyticsChange(newValue)
+        }
+        .onChange(of: currentProvider) { oldValue, newValue in
+            handleProviderChange(oldValue: oldValue, newValue: newValue)
+        }
+        .onChange(of: selectedTab) { oldValue, newValue in
+            handleTabChange(oldValue: oldValue, newValue: newValue)
+        }
         .sheet(item: setupModalBinding, content: providerSetupSheet)
         .alert(isPresented: $showLimitConfirmation, content: { limitConfirmationAlert })
         .preferredColorScheme(.light)
-        .geminiPromptChangeHandlers
-        .ollamaPromptChangeHandlers
+        .onChange(of: useCustomGeminiTitlePrompt) { persistGeminiPromptOverridesIfReady() }
+        .onChange(of: useCustomGeminiSummaryPrompt) { persistGeminiPromptOverridesIfReady() }
+        .onChange(of: useCustomGeminiDetailedPrompt) { persistGeminiPromptOverridesIfReady() }
+        .onChange(of: geminiTitlePromptText) { persistGeminiPromptOverridesIfReady() }
+        .onChange(of: geminiSummaryPromptText) { persistGeminiPromptOverridesIfReady() }
+        .onChange(of: geminiDetailedPromptText) { persistGeminiPromptOverridesIfReady() }
+        .onChange(of: useCustomOllamaTitlePrompt) { persistOllamaPromptOverridesIfReady() }
+        .onChange(of: useCustomOllamaSummaryPrompt) { persistOllamaPromptOverridesIfReady() }
+        .onChange(of: ollamaTitlePromptText) { persistOllamaPromptOverridesIfReady() }
+        .onChange(of: ollamaSummaryPromptText) { persistOllamaPromptOverridesIfReady() }
     }
     
-    private func handleAnalyticsChange(oldValue: Bool, newValue: Bool) {
-        AnalyticsService.shared.setOptIn(newValue)
+    private func handleAnalyticsChange(_ value: Bool) {
+        AnalyticsService.shared.setOptIn(value)
     }
     
     private var setupModalBinding: Binding<ProviderSetupWrapper?> {
@@ -134,11 +148,11 @@ struct SettingsView: View {
         .frame(minWidth: 900, minHeight: 650)
     }
     
-    private func handleProviderChange(oldValue: String, newProvider: String) {
+    private func handleProviderChange(oldValue: String, newValue: String) {
         reloadLocalProviderSettings()
-        if newProvider == "gemini" {
+        if newValue == "gemini" {
             loadGeminiPromptOverridesIfNeeded(force: true)
-        } else if newProvider == "ollama" {
+        } else if newValue == "ollama" {
             loadOllamaPromptOverridesIfNeeded(force: true)
         }
     }
@@ -147,26 +161,6 @@ struct SettingsView: View {
         if newValue == .storage {
             refreshStorageIfNeeded()
         }
-    }
-    
-    @ViewBuilder
-    private var geminiPromptChangeHandlers: some View {
-        EmptyView()
-            .onChange(of: useCustomGeminiTitlePrompt) { persistGeminiPromptOverridesIfReady() }
-            .onChange(of: useCustomGeminiSummaryPrompt) { persistGeminiPromptOverridesIfReady() }
-            .onChange(of: useCustomGeminiDetailedPrompt) { persistGeminiPromptOverridesIfReady() }
-            .onChange(of: geminiTitlePromptText) { persistGeminiPromptOverridesIfReady() }
-            .onChange(of: geminiSummaryPromptText) { persistGeminiPromptOverridesIfReady() }
-            .onChange(of: geminiDetailedPromptText) { persistGeminiPromptOverridesIfReady() }
-    }
-    
-    @ViewBuilder
-    private var ollamaPromptChangeHandlers: some View {
-        EmptyView()
-            .onChange(of: useCustomOllamaTitlePrompt) { persistOllamaPromptOverridesIfReady() }
-            .onChange(of: useCustomOllamaSummaryPrompt) { persistOllamaPromptOverridesIfReady() }
-            .onChange(of: ollamaTitlePromptText) { persistOllamaPromptOverridesIfReady() }
-            .onChange(of: ollamaSummaryPromptText) { persistOllamaPromptOverridesIfReady() }
     }
     
     private var mainContentView: some View {

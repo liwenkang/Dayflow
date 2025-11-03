@@ -27,10 +27,13 @@ final class FaviconService {
 
         // Deduplicate concurrent requests for the same host
         if let existing = existingTask(for: host) {
-            if let img = await existing.value {
-                cache.setObject(img, forKey: key)
+            let img = await existing.value
+            if let img = img {
+                await MainActor.run {
+                    self.cache.setObject(img, forKey: key)
+                }
             }
-            return await existing.value
+            return img
         }
 
         // Create a new task for this host and store it in-flight
@@ -44,11 +47,11 @@ final class FaviconService {
 
             let result = await withTaskGroup(of: NSImage?.self) { group -> NSImage? in
                 // Aggregator fetch first (preferred default)
-                group.addTask { [s2URL] in
+                group.addTask { @MainActor [s2URL] in
                     await self.requestURL(s2URL)
                 }
                 // Direct site fetch with a small delay
-                group.addTask { [siteURL] in
+                group.addTask { @MainActor [siteURL] in
                     // 150ms head-start for S2
                     try? await Task.sleep(nanoseconds: 150_000_000)
                     return await self.requestURL(siteURL)
