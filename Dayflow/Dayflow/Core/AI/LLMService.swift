@@ -131,7 +131,7 @@ final class LLMService: LLMServicing {
                 print("   Batch time: \(Date(timeIntervalSince1970: TimeInterval(batchStartTs))) to \(Date(timeIntervalSince1970: TimeInterval(batchEndTs)))")
 
                 // Track analysis batch started
-                await AnalyticsService.shared.capture("analysis_batch_started", [
+                AnalyticsService.shared.capture("analysis_batch_started", [
                     "batch_id": batchId,
                     "total_duration_seconds": batchEndTs - batchStartTs,
                     "llm_provider": providerName()
@@ -165,12 +165,12 @@ final class LLMService: LLMServicing {
                     throw NSError(domain: "LLMService", code: 6, userInfo: [NSLocalizedDescriptionKey: "Failed to create composition track"])
                 }
                 
-                for (index, filePath) in chunkFiles.enumerated() {
+                for filePath in chunkFiles {
                     let url = URL(fileURLWithPath: filePath)
                     
                     let asset = AVAsset(url: url)
                     let duration = try await asset.load(.duration)
-                    let durationSeconds = CMTimeGetSeconds(duration)
+                    let _ = CMTimeGetSeconds(duration)
                     
         
                     if let track = try await asset.loadTracks(withMediaType: .video).first {
@@ -225,7 +225,7 @@ final class LLMService: LLMServicing {
                     if let logInput = transcribeLog.input, !logInput.isEmpty {
                         print("   ↳ transcribeLog.input: \(logInput)")
                     }
-                    await AnalyticsService.shared.capture("transcription_returned_empty", [
+                    AnalyticsService.shared.capture("transcription_returned_empty", [
                         "batch_id": batchId,
                         "provider": providerName(),
                         "transcribe_latency_ms": Int((transcribeLog.latency ?? 0) * 1000)
@@ -290,7 +290,7 @@ final class LLMService: LLMServicing {
                 )
                 
                 // Generate activity cards using sliding window observations
-                let (cards, cardsLog) = try await provider.generateActivityCards(
+                let (cards, _) = try await provider.generateActivityCards(
                     observations: recentObservations,
                     context: context,
                     batchId: batchId
@@ -332,7 +332,7 @@ final class LLMService: LLMServicing {
                 StorageManager.shared.updateBatch(batchId, status: "analyzed")
 
                 // Track analysis batch completed
-                await AnalyticsService.shared.capture("analysis_batch_completed", [
+                AnalyticsService.shared.capture("analysis_batch_completed", [
                     "batch_id": batchId,
                     "cards_generated": cards.count,
                     "processing_duration_seconds": Int(Date().timeIntervalSince(processingStartTime)),
@@ -348,7 +348,7 @@ final class LLMService: LLMServicing {
                 }
 
                 // Track analysis batch failed
-                await AnalyticsService.shared.capture("analysis_batch_failed", [
+                AnalyticsService.shared.capture("analysis_batch_failed", [
                     "batch_id": batchId,
                     "error_message": error.localizedDescription,
                     "processing_duration_seconds": Int(Date().timeIntervalSince(processingStartTime)),

@@ -202,7 +202,7 @@ struct MainView: View {
 
                             // Divider
                             Rectangle()
-                                .fill(Color(hex: "ECECEC") ?? Color.gray)
+                                .fill(Color(hex: "ECECEC"))
                                 .frame(width: 1)
                                 .frame(maxHeight: .infinity)
 
@@ -314,13 +314,13 @@ struct MainView: View {
             startDayChangeTimer()
         }
         // Trigger reset when idle fired and timeline is visible
-        .onChange(of: inactivity.pendingReset) { fired in
-            if fired, selectedIcon != .settings {
+        .onChange(of: inactivity.pendingReset) { oldValue, newValue in
+            if newValue, selectedIcon != .settings {
                 performIdleResetAndScroll()
                 InactivityMonitor.shared.markHandledIfPending()
             }
         }
-        .onChange(of: selectedIcon) { newIcon in
+        .onChange(of: selectedIcon) { oldValue, newIcon in
             // tab selected + screen viewed
             let tabName: String
             switch newIcon {
@@ -354,7 +354,7 @@ struct MainView: View {
                 }
             }
         }
-        .onChange(of: selectedDate) { newDate in
+        .onChange(of: selectedDate) { oldValue, newDate in
             // If changed via picker, emit navigation now
             if let method = lastDateNavMethod, method == "picker" {
                 AnalyticsService.shared.capture("date_navigation", [
@@ -368,7 +368,7 @@ struct MainView: View {
                 AnalyticsService.shared.capture("timeline_viewed", ["date_bucket": dayString(newDate)])
             }
         }
-        .onChange(of: selectedActivity?.id) { _ in
+        .onChange(of: selectedActivity?.id) {
             guard let a = selectedActivity else { return }
             let dur = a.endTime.timeIntervalSince(a.startTime)
             AnalyticsService.shared.capture("activity_card_opened", [
@@ -378,7 +378,7 @@ struct MainView: View {
             ])
         }
         // If user returns from Settings and a reset was pending, perform it once
-        .onChange(of: selectedIcon) { newIcon in
+        .onChange(of: selectedIcon) { oldValue, newIcon in
             if newIcon != .settings, inactivity.pendingReset {
                 performIdleResetAndScroll()
                 InactivityMonitor.shared.markHandledIfPending()
@@ -538,7 +538,7 @@ struct TabFilterBar: View {
             HStack(spacing: 0) {
                 Spacer()
                 LinearGradient(
-                    gradient: Gradient(colors: [Color.clear, Color(hex: "FFF8F1") ?? Color.white]),
+                    gradient: Gradient(colors: [Color.clear, Color(hex: "FFF8F1")]),
                     startPoint: .leading,
                     endPoint: .trailing
                 )
@@ -569,7 +569,7 @@ struct TabFilterBar: View {
         var body: some View {
             HStack(spacing: 10) {
                 Circle()
-                    .fill(Color(hex: category.colorHex) ?? .blue)
+                    .fill(Color(hex: category.colorHex))
                     .frame(width: 10, height: 10)
 
                 Text(category.name)

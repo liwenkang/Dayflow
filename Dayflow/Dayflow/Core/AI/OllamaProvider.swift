@@ -57,7 +57,7 @@ final class OllamaProvider: LLMProvider {
         // Step 1: Extract frames at intervals
         let extractionStart = Date()
         let frames = try await extractFrames(from: tempURL)
-        let extractionTime = Date().timeIntervalSince(extractionStart)
+        let _ = Date().timeIntervalSince(extractionStart)
         
         
         // Step 2: Get simple descriptions for each frame
@@ -77,7 +77,7 @@ final class OllamaProvider: LLMProvider {
             videoDuration: videoDuration,
             batchId: batchId
         )
-        let mergeTime = Date().timeIntervalSince(mergeStart)
+        let _ = Date().timeIntervalSince(mergeStart)
         
         
         let totalTime = Date().timeIntervalSince(callStart)
@@ -371,9 +371,17 @@ final class OllamaProvider: LLMProvider {
     private struct ChatRequest: Codable {
         let model: String
         let messages: [ChatMessage]
-        let temperature: Double = 0.7
-        let max_tokens: Int = -1
-        let stream: Bool = false
+        let temperature: Double
+        let max_tokens: Int
+        let stream: Bool
+        
+        init(model: String, messages: [ChatMessage], temperature: Double = 0.7, max_tokens: Int = -1, stream: Bool = false) {
+            self.model = model
+            self.messages = messages
+            self.temperature = temperature
+            self.max_tokens = max_tokens
+            self.stream = stream
+        }
     }
     
     private struct ChatMessage: Codable {
@@ -428,7 +436,7 @@ final class OllamaProvider: LLMProvider {
         }
         
         // Build message content with image and text
-        var content: [MessageContent] = [
+        let content: [MessageContent] = [
             MessageContent(type: "text", text: prompt, image_url: nil),
             MessageContent(type: "image_url", text: nil, image_url: MessageContent.ImageURL(url: "data:image/jpeg;base64,\(base64String)"))
         ]
@@ -494,7 +502,7 @@ final class OllamaProvider: LLMProvider {
                 )
                 ctxForAttempt = ctx
                 let (data, response) = try await URLSession.shared.data(for: urlRequest)
-                let apiTime = Date().timeIntervalSince(apiStart)
+                let _ = Date().timeIntervalSince(apiStart)
                 
                 guard let httpResponse = response as? HTTPURLResponse else {
                     throw NSError(domain: "OllamaProvider", code: 4, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])

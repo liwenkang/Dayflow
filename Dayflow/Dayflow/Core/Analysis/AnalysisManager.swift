@@ -114,7 +114,7 @@ final class AnalysisManager: AnalysisManaging {
             
             // 6. Process each batch sequentially
             var processedCount = 0
-            var hasError = false
+            let hasError = false
             
             for (index, batchId) in batchIds.enumerated() {
                 if hasError { break }
@@ -127,7 +127,7 @@ final class AnalysisManager: AnalysisManaging {
                 }
                 
                 // Use a semaphore to wait for each batch to complete
-                let semaphore = DispatchSemaphore(value: 0)
+                let _ = DispatchSemaphore(value: 0)
                 
                 self.queueGeminiRequest(batchId: batchId)
                 
@@ -245,7 +245,7 @@ final class AnalysisManager: AnalysisManaging {
 
             // Process batches
             var processedCount = 0
-            var hasError = false
+            let hasError = false
             
             for (index, batchId) in batchesToProcess.enumerated() {
                 if hasError { break }
@@ -373,7 +373,7 @@ final class AnalysisManager: AnalysisManaging {
         updateBatchStatus(batchId: batchId, status: "processing")
 
         // Prepare file URLs for video processing
-        let chunkFileURLs: [URL] = chunksInBatch.compactMap { chunk in
+        let _: [URL] = chunksInBatch.compactMap { chunk in
             // Assuming chunk.fileUrl is a String path, convert to URL
             // Ensure this path is accessible. If it's a relative path, resolve it.
             // For now, assuming it's an absolute file path string.

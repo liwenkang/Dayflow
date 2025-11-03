@@ -401,7 +401,6 @@ final class GeminiDirectProvider: LLMProvider {
         var lastError: Error?
         var finalResponse = ""
         var finalObservations: [Observation] = []
-        var finalUsedModel = modelPreference.primary.rawValue
 
         var modelState = ModelRunState(models: modelPreference.orderedModels)
         let callGroupId = UUID().uuidString
@@ -469,7 +468,6 @@ final class GeminiDirectProvider: LLMProvider {
                 print("✅ Video transcription succeeded on attempt \(attempt + 1)")
                 finalResponse = response
                 finalObservations = observations
-                finalUsedModel = usedModel
                 break
 
             } catch {
@@ -487,7 +485,7 @@ final class GeminiDirectProvider: LLMProvider {
                     print("↘️ Downgrading to \(transition.to.rawValue) after \(nsError.code)")
 
                     Task { @MainActor in
-                        await AnalyticsService.shared.capture("llm_model_fallback", [
+                        AnalyticsService.shared.capture("llm_model_fallback", [
                             "provider": "gemini",
                             "operation": "transcribe",
                             "from_model": transition.from.rawValue,
@@ -820,7 +818,7 @@ final class GeminiDirectProvider: LLMProvider {
                     print("↘️ Downgrading to \(transition.to.rawValue) after \(nsError.code)")
 
                     Task { @MainActor in
-                        await AnalyticsService.shared.capture("llm_model_fallback", [
+                        AnalyticsService.shared.capture("llm_model_fallback", [
                             "provider": "gemini",
                             "operation": "generate_activity_cards",
                             "from_model": transition.from.rawValue,
@@ -1179,7 +1177,7 @@ private func uploadResumable(data: Data, mimeType: String) async throws -> Strin
             // Prepare logging context
             let responseHeaders: [String:String] = httpResponse.allHeaderFields.reduce(into: [:]) { acc, kv in
                 if let k = kv.key as? String, let v = kv.value as? CustomStringConvertible { acc[k] = v.description }
-            } ?? [:]
+            }
             let modelName = model.rawValue
             let ctx = LLMCallContext(
                 batchId: batchId,
@@ -1493,7 +1491,7 @@ private func uploadResumable(data: Data, mimeType: String) async throws -> Strin
             // Prepare logging context
             let responseHeaders: [String:String] = httpResponse.allHeaderFields.reduce(into: [:]) { acc, kv in
                 if let k = kv.key as? String, let v = kv.value as? CustomStringConvertible { acc[k] = v.description }
-            } ?? [:]
+            }
             let modelName = model.rawValue
             let ctx = LLMCallContext(
                 batchId: batchId,

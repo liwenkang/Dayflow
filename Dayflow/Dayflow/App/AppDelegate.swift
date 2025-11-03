@@ -120,7 +120,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     }
                     print("Screen recording permission not granted, skipping auto-start")
                 }
-                await self.flushPendingDeepLinks()
+                self.flushPendingDeepLinks()
             }
         } else {
             // Still in early onboarding, don't enable persistence yet
@@ -160,7 +160,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil,
             queue: .main
         ) { _ in
-            AppDelegate.allowTermination = true
+            Task { @MainActor in
+                AppDelegate.allowTermination = true
+            }
         }
 
     }

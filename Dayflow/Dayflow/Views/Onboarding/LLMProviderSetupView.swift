@@ -524,7 +524,7 @@ struct LLMProviderSetupView: View {
                         .font(.custom("Nunito", size: 13))
                         .foregroundColor(.black.opacity(0.55))
                 }
-                .onChange(of: setupState.geminiModel) { _ in
+                .onChange(of: setupState.geminiModel) {
                     setupState.persistGeminiModelSelection(source: "onboarding_picker")
                 }
                 

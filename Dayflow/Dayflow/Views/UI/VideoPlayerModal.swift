@@ -357,7 +357,7 @@ struct VideoPlayerModal: View {
                 "completion_pct_bucket": AnalyticsService.shared.pctBucket(pct)
             ])
         }
-        .onChange(of: viewModel.isPlaying) { playing in
+        .onChange(of: viewModel.isPlaying) { oldValue, playing in
             if playing {
                 if didStartPlay {
                     AnalyticsService.shared.capture("video_resumed")
@@ -373,7 +373,7 @@ struct VideoPlayerModal: View {
                 }
             }
         }
-        .onChange(of: viewModel.playbackSpeed) { _ in
+        .onChange(of: viewModel.playbackSpeed) {
             if didStartPlay {
                 AnalyticsService.shared.capture("video_playback_speed_changed", ["speed": String(format: "%.1fx", viewModel.playbackSpeed)])
             }

@@ -48,7 +48,7 @@ struct CanvasTimelineDataView: View {
             }
             .background(Color.clear)
             // Respond to external scroll nudges (initial or idle-triggered)
-            .onChange(of: scrollToNowTick) { _ in
+            .onChange(of: scrollToNowTick) {
                 // Calculate which hour to scroll to for 80% positioning
                 let currentHour = Calendar.current.component(.hour, from: Date())
                 let hoursSince4AM = currentHour >= 4 ? currentHour - 4 : (24 - 4) + currentHour
@@ -58,7 +58,7 @@ struct CanvasTimelineDataView: View {
                 proxy.scrollTo("hour-\(targetHourIndex)", anchor: UnitPoint(x: 0, y: 0.25))
             }
             // Scroll once right after activities are first loaded and laid out
-            .onChange(of: positionedActivities.count) { _ in
+            .onChange(of: positionedActivities.count) {
                 guard !didInitialScrollInView, timelineIsToday(selectedDate) else { return }
                 didInitialScrollInView = true
                 
@@ -85,7 +85,7 @@ struct CanvasTimelineDataView: View {
                 }
             }
             // When the selected date changes back to Today (e.g., after idle), also scroll
-            .onChange(of: selectedDate) { newDate in
+            .onChange(of: selectedDate) { oldValue, newDate in
                 if timelineIsToday(newDate) {
                     didInitialScrollInView = false // allow the data-ready scroll to fire again
                     // Give the layout a moment to update before scrolling
@@ -112,7 +112,7 @@ struct CanvasTimelineDataView: View {
             loadTask?.cancel()
             loadTask = nil
         }
-        .onChange(of: selectedDate) { _ in
+        .onChange(of: selectedDate) {
             loadActivities()
         }
     }
@@ -256,7 +256,7 @@ struct CanvasTimelineDataView: View {
                 .onAppear {
                     isBreathing = appState.isRecording
                 }
-                .onChange(of: appState.isRecording) { newValue in
+                .onChange(of: appState.isRecording) { oldValue, newValue in
                     isBreathing = newValue
                 }
 
@@ -345,7 +345,7 @@ struct CanvasTimelineDataView: View {
                 }
                 
                 // Sort by start time to maintain consistent order
-                return results.sorted { $0.activity.start < $1.activity.start }
+                return results.sorted(by: { $0.activity.start < $1.activity.start })
             }
 
             // Final cancellation check before updating UI
@@ -698,13 +698,13 @@ struct CanvasActivityCard: View {
         .padding(.horizontal, 10)
         .padding(.vertical, isFailedCard ? 0 : 6)
         .frame(maxWidth: .infinity, minHeight: height, maxHeight: height, alignment: .topLeading)
-        .background(isFailedCard ? Color(hex: "FFECE4") ?? Color.white : (Color(hex: "FFFBF8") ?? Color.white))
+        .background(isFailedCard ? Color(hex: "FFECE4") : Color(hex: "FFFBF8"))
         .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 2, style: .continuous)
                 .inset(by: 0.25)
                 .stroke(
-                    isFailedCard ? Color(red: 1, green: 0.16, blue: 0.11) : (Color(hex: "E8E8E8") ?? Color.gray),
+                    isFailedCard ? Color(red: 1, green: 0.16, blue: 0.11) : Color(hex: "E8E8E8"),
                     style: isFailedCard ? StrokeStyle(lineWidth: 0.5, dash: [2.5, 2.5]) : StrokeStyle(lineWidth: 0.25)
                 )
         )

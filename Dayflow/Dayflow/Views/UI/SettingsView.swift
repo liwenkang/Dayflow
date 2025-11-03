@@ -127,10 +127,10 @@ struct SettingsView: View {
             timelapsesLimitIndex = indexForLimit(timelapseLimit)
             AnalyticsService.shared.capture("settings_opened")
         }
-        .onChange(of: analyticsEnabled) { enabled in
+        .onChange(of: analyticsEnabled) { oldValue, enabled in
             AnalyticsService.shared.setOptIn(enabled)
         }
-        .onChange(of: currentProvider) { newProvider in
+        .onChange(of: currentProvider) { oldValue, newProvider in
             reloadLocalProviderSettings()
             if newProvider == "gemini" {
                 loadGeminiPromptOverridesIfNeeded(force: true)
@@ -138,7 +138,7 @@ struct SettingsView: View {
                 loadOllamaPromptOverridesIfNeeded(force: true)
             }
         }
-        .onChange(of: selectedTab) { newValue in
+        .onChange(of: selectedTab) { oldValue, newValue in
             if newValue == .storage {
                 refreshStorageIfNeeded()
             }
@@ -179,16 +179,16 @@ struct SettingsView: View {
         }
         // The settings palette is tailored for light mode; keep it consistent even when the app runs in Dark Mode.
         .preferredColorScheme(.light)
-        .onChange(of: useCustomGeminiTitlePrompt) { _ in persistGeminiPromptOverridesIfReady() }
-        .onChange(of: useCustomGeminiSummaryPrompt) { _ in persistGeminiPromptOverridesIfReady() }
-        .onChange(of: useCustomGeminiDetailedPrompt) { _ in persistGeminiPromptOverridesIfReady() }
-        .onChange(of: geminiTitlePromptText) { _ in persistGeminiPromptOverridesIfReady() }
-        .onChange(of: geminiSummaryPromptText) { _ in persistGeminiPromptOverridesIfReady() }
-        .onChange(of: geminiDetailedPromptText) { _ in persistGeminiPromptOverridesIfReady() }
-        .onChange(of: useCustomOllamaTitlePrompt) { _ in persistOllamaPromptOverridesIfReady() }
-        .onChange(of: useCustomOllamaSummaryPrompt) { _ in persistOllamaPromptOverridesIfReady() }
-        .onChange(of: ollamaTitlePromptText) { _ in persistOllamaPromptOverridesIfReady() }
-        .onChange(of: ollamaSummaryPromptText) { _ in persistOllamaPromptOverridesIfReady() }
+        .onChange(of: useCustomGeminiTitlePrompt) { persistGeminiPromptOverridesIfReady() }
+        .onChange(of: useCustomGeminiSummaryPrompt) { persistGeminiPromptOverridesIfReady() }
+        .onChange(of: useCustomGeminiDetailedPrompt) { persistGeminiPromptOverridesIfReady() }
+        .onChange(of: geminiTitlePromptText) { persistGeminiPromptOverridesIfReady() }
+        .onChange(of: geminiSummaryPromptText) { persistGeminiPromptOverridesIfReady() }
+        .onChange(of: geminiDetailedPromptText) { persistGeminiPromptOverridesIfReady() }
+        .onChange(of: useCustomOllamaTitlePrompt) { persistOllamaPromptOverridesIfReady() }
+        .onChange(of: useCustomOllamaSummaryPrompt) { persistOllamaPromptOverridesIfReady() }
+        .onChange(of: ollamaTitlePromptText) { persistOllamaPromptOverridesIfReady() }
+        .onChange(of: ollamaSummaryPromptText) { persistOllamaPromptOverridesIfReady() }
     }
 
     private var sidebar: some View {
@@ -1282,7 +1282,7 @@ private struct GeminiModelSettingsCard: View {
                 .font(.custom("Nunito", size: 11))
                 .foregroundColor(.black.opacity(0.45))
         }
-        .onChange(of: selectedModel) { newValue in
+        .onChange(of: selectedModel) { oldValue, newValue in
             onSelectionChanged(newValue)
         }
     }
