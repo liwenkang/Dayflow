@@ -359,7 +359,7 @@ struct CanvasTimelineDataView: View {
     }
 
     // Normalize a domain or URL-like string to just the host
-    private func normalizeHost(_ site: String?) -> String? {
+    nonisolated private func normalizeHost(_ site: String?) -> String? {
         guard var site = site, !site.isEmpty else { return nil }
         site = site.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if let url = URL(string: site), url.host != nil {
@@ -573,7 +573,7 @@ struct CanvasTimelineDataView: View {
         return "\(adjustedHour):00 \(period)"
     }
 
-    private func formatRange(start: Date, end: Date) -> String {
+    nonisolated private func formatRange(start: Date, end: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "h:mm a"
         let s = formatter.string(from: start)

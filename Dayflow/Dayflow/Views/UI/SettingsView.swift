@@ -94,50 +94,75 @@ struct SettingsView: View {
     }()
 
     var body: some View {
-        mainContentView
-            .padding(.trailing, 40)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .onAppear(perform: handleAppear)
-            .onChange(of: analyticsEnabled) { oldValue, enabled in
-                AnalyticsService.shared.setOptIn(enabled)
+        Group {
+            mainContentView
+                .padding(.trailing, 40)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+        .onAppear(perform: handleAppear)
+        .onChange(of: analyticsEnabled, perform: handleAnalyticsChange)
+        .onChange(of: currentProvider, perform: handleProviderChange)
+        .onChange(of: selectedTab, perform: handleTabChange)
+        .sheet(item: setupModalBinding, content: providerSetupSheet)
+        .alert(isPresented: $showLimitConfirmation, content: { limitConfirmationAlert })
+        .preferredColorScheme(.light)
+        .geminiPromptChangeHandlers
+        .ollamaPromptChangeHandlers
+    }
+    
+    private func handleAnalyticsChange(oldValue: Bool, newValue: Bool) {
+        AnalyticsService.shared.setOptIn(newValue)
+    }
+    
+    private var setupModalBinding: Binding<ProviderSetupWrapper?> {
+        Binding(
+            get: { setupModalProvider.map { ProviderSetupWrapper(id: $0) } },
+            set: { setupModalProvider = $0?.id }
+        )
+    }
+    
+    @ViewBuilder
+    private func providerSetupSheet(wrapper: ProviderSetupWrapper) -> some View {
+        LLMProviderSetupView(
+            providerType: wrapper.id,
+            onBack: { setupModalProvider = nil },
+            onComplete: {
+                completeProviderSwitch(wrapper.id)
+                setupModalProvider = nil
             }
-            .onChange(of: currentProvider) { oldValue, newProvider in
-                reloadLocalProviderSettings()
-                if newProvider == "gemini" {
-                    loadGeminiPromptOverridesIfNeeded(force: true)
-                } else if newProvider == "ollama" {
-                    loadOllamaPromptOverridesIfNeeded(force: true)
-                }
-            }
-            .onChange(of: selectedTab) { oldValue, newValue in
-                if newValue == .storage {
-                    refreshStorageIfNeeded()
-                }
-            }
-            .sheet(item: Binding(
-                get: { setupModalProvider.map { ProviderSetupWrapper(id: $0) } },
-                set: { setupModalProvider = $0?.id }
-            )) { wrapper in
-                LLMProviderSetupView(
-                    providerType: wrapper.id,
-                    onBack: { setupModalProvider = nil },
-                    onComplete: {
-                        completeProviderSwitch(wrapper.id)
-                        setupModalProvider = nil
-                    }
-                )
-                .frame(minWidth: 900, minHeight: 650)
-            }
-            .alert(isPresented: $showLimitConfirmation) {
-                limitConfirmationAlert
-            }
-            .preferredColorScheme(.light)
+        )
+        .frame(minWidth: 900, minHeight: 650)
+    }
+    
+    private func handleProviderChange(oldValue: String, newProvider: String) {
+        reloadLocalProviderSettings()
+        if newProvider == "gemini" {
+            loadGeminiPromptOverridesIfNeeded(force: true)
+        } else if newProvider == "ollama" {
+            loadOllamaPromptOverridesIfNeeded(force: true)
+        }
+    }
+    
+    private func handleTabChange(oldValue: SettingsTab, newValue: SettingsTab) {
+        if newValue == .storage {
+            refreshStorageIfNeeded()
+        }
+    }
+    
+    @ViewBuilder
+    private var geminiPromptChangeHandlers: some View {
+        EmptyView()
             .onChange(of: useCustomGeminiTitlePrompt) { persistGeminiPromptOverridesIfReady() }
             .onChange(of: useCustomGeminiSummaryPrompt) { persistGeminiPromptOverridesIfReady() }
             .onChange(of: useCustomGeminiDetailedPrompt) { persistGeminiPromptOverridesIfReady() }
             .onChange(of: geminiTitlePromptText) { persistGeminiPromptOverridesIfReady() }
             .onChange(of: geminiSummaryPromptText) { persistGeminiPromptOverridesIfReady() }
             .onChange(of: geminiDetailedPromptText) { persistGeminiPromptOverridesIfReady() }
+    }
+    
+    @ViewBuilder
+    private var ollamaPromptChangeHandlers: some View {
+        EmptyView()
             .onChange(of: useCustomOllamaTitlePrompt) { persistOllamaPromptOverridesIfReady() }
             .onChange(of: useCustomOllamaSummaryPrompt) { persistOllamaPromptOverridesIfReady() }
             .onChange(of: ollamaTitlePromptText) { persistOllamaPromptOverridesIfReady() }
@@ -957,7 +982,7 @@ struct SettingsView: View {
         return trimmed.isEmpty ? nil : trimmed
     }
 
-    private static func directorySize(at url: URL) -> Int64 {
+    nonisolated private static func directorySize(at url: URL) -> Int64 {
         let fileManager = FileManager.default
         guard let enumerator = fileManager.enumerator(at: url, includingPropertiesForKeys: [.fileAllocatedSizeKey, .totalFileAllocatedSizeKey], options: [.skipsHiddenFiles]) else {
             return 0
