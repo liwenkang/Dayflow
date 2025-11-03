@@ -308,29 +308,44 @@ struct CanvasTimelineDataView: View {
             // upstream card-generation overlap bugs without touching stored data.
             let segments = await self.resolveOverlapsForDisplay(activities)
 
-            let positioned = await segments.map { seg -> CanvasPositionedActivity in
-                let y = await MainActor.run {
-                    self.calculateYPosition(for: seg.start)
-                }
-                // Card spacing: -2 total (1px top + 1px bottom)
-                let durationMinutes = max(0, seg.end.timeIntervalSince(seg.start) / 60)
-                let rawHeight = CGFloat(durationMinutes) * CanvasConfig.pixelsPerMinute
-                let height = max(10, rawHeight - 2)
-                let primaryHost = self.normalizeHost(seg.activity.appSites?.primary)
-                let secondaryHost = self.normalizeHost(seg.activity.appSites?.secondary)
+            let positioned = await withTaskGroup(of: CanvasPositionedActivity.self, returning: [CanvasPositionedActivity].self) { group in
+                var results: [CanvasPositionedActivity] = []
+                results.reserveCapacity(segments.count)
+                
+                for seg in segments {
+                    group.addTask {
+                        let y = await MainActor.run {
+                            self.calculateYPosition(for: seg.start)
+                        }
+                        // Card spacing: -2 total (1px top + 1px bottom)
+                        let durationMinutes = max(0, seg.end.timeIntervalSince(seg.start) / 60)
+                        let rawHeight = CGFloat(durationMinutes) * CanvasConfig.pixelsPerMinute
+                        let height = max(10, rawHeight - 2)
+                        let primaryHost = self.normalizeHost(seg.activity.appSites?.primary)
+                        let secondaryHost = self.normalizeHost(seg.activity.appSites?.secondary)
 
-                return CanvasPositionedActivity(
-                    id: seg.activity.id,
-                    activity: seg.activity,
-                    yPosition: y + 1, // 1px top spacing
-                    height: height,
-                    durationMinutes: durationMinutes,
-                    title: seg.activity.title,
-                    timeLabel: self.formatRange(start: seg.start, end: seg.end),
-                    categoryName: seg.activity.category,
-                    faviconPrimaryHost: primaryHost,
-                    faviconSecondaryHost: secondaryHost
-                )
+                        return CanvasPositionedActivity(
+                            id: seg.activity.id,
+                            activity: seg.activity,
+                            yPosition: y + 1, // 1px top spacing
+                            height: height,
+                            durationMinutes: durationMinutes,
+                            title: seg.activity.title,
+                            timeLabel: self.formatRange(start: seg.start, end: seg.end),
+                            categoryName: seg.activity.category,
+                            faviconPrimaryHost: primaryHost,
+                            faviconSecondaryHost: secondaryHost
+                        )
+                    }
+                }
+                
+                // Collect results in completion order (order doesn't matter for display)
+                for await result in group {
+                    results.append(result)
+                }
+                
+                // Sort by start time to maintain consistent order
+                return results.sorted { $0.activity.start < $1.activity.start }
             }
 
             // Final cancellation check before updating UI

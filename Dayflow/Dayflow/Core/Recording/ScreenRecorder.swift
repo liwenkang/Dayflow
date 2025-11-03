@@ -261,7 +261,7 @@ final class ScreenRecorder: NSObject, SCStreamOutput {
             // choose the display: prefer requested → active → first
             let displaysByID: [CGDirectDisplayID: SCDisplay] = Dictionary(uniqueKeysWithValues: content.displays.map { ($0.displayID, $0) })
             // Read tracker's active display on the main actor to respect isolation
-            let trackerID: CGDirectDisplayID? = await MainActor.run { [tracker] in tracker.activeDisplayID }
+            let trackerID: CGDirectDisplayID? = await MainActor.run { [tracker] in tracker?.activeDisplayID }
             let preferredID = requestedDisplayID ?? trackerID
             let display: SCDisplay
             if let pid = preferredID, let scd = displaysByID[pid] {
@@ -335,7 +335,7 @@ final class ScreenRecorder: NSObject, SCStreamOutput {
             let isNoDisplay = (error as? RecorderError) == .noDisplay
 
             // Check if this is a user-initiated stop
-            if isUserInitiatedStop(error) {
+            if await MainActor.run { isUserInitiatedStop(error) } {
                 dbg("User stopped recording during startup - updating app state")
 
                 Task { @MainActor in
@@ -353,7 +353,7 @@ final class ScreenRecorder: NSObject, SCStreamOutput {
             }
 
             // Treat `noDisplay` like other transient issues
-            let retryable = shouldRetry(error) || isNoDisplay
+            let retryable = await MainActor.run { shouldRetry(error) } || isNoDisplay
 
             if retryable, attempt < maxAttempts {
                 let delay = Double(attempt)        // 1 s, 2 s, 3 s …
